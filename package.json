@@ -1,0 +1,23 @@
+{
+  "name": "stentor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "deploy": "./node_modules/truffle/build/cli.bundled.js deploy --reset",
+    "ethinstall": "./node_modules/truffle/build/cli.bundled.js install",
+    "lint": "./node_modules/solium/bin/solium.js --dir .",
+    "test": "./node_modules/truffle/build/cli.bundled.js test",
+    "testrpc": "./node_modules/ethereumjs-testrpc/build/cli.node.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ethereumjs-testrpc": "^4.0.1",
+    "solium": "^0.5.5",
+    "truffle": "^3.4.7"
+  }
+}

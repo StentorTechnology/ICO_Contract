@@ -1,0 +1,14 @@
+{
+  "package_name": "stentor",
+  "version": "0.0.1",
+  "description": "",
+  "authors": [
+    ""
+  ],
+  "keywords": [
+    "ethereum"
+  ],
+  "dependencies": {
+    "zeppelin": "^1.3.0"
+  }
+}
