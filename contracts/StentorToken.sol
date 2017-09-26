@@ -13,5 +13,10 @@ contract StentorToken is StandardToken {
     string public constant symbol = "SGT";
     uint8 public constant decimals = 18;
 
+    function StentorToken(uint256 _initialAmount) {
+        balances[msg.sender] = _initialAmount;
+        totalSupply = _initialAmount;
+    }
+
 
 }
