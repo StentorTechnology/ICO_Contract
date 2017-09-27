@@ -7,8 +7,8 @@ const config  = require('./../config.js');
 
 module.exports = async function(deployer, network, accounts) {
 
-    const crowdsaleWallet = accounts[0];
-    const foundationWallet = accounts[1];
+    const crowdsaleWallet = accounts[0]; // receives ETH upon successful campaign
+    const foundationWallet = accounts[1]; // receives SGT upon deployment
 
     await deployer.deploy(StentorToken, config.initialSupply);
     await deployer.deploy(RefundVault, crowdsaleWallet);
