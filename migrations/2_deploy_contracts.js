@@ -21,4 +21,9 @@ module.exports = async function(deployer, network, accounts) {
         await token.transfer(VestedWallet.address, config.team.amount);
         await token.transfer(foundationWallet, config.foundation.amount);
     });
+
+    //transfer control of the vault to the crowdsale
+    await RefundVault.deployed().then(async (vault) => {
+       vault.transferOwnership(StentorCrowdsale.address);
+    });
 };
