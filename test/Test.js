@@ -10,7 +10,6 @@ const waitForEvents = require("./helpers/waitForEvents");
 contract('StentorToken', async function (accounts) {
 
     let token, crowdsale, vault, vestedWallet;
-
     const crowdsaleWallet = accounts[0];
     const foundationWallet = accounts[2];
 
@@ -73,8 +72,7 @@ contract('VestedWallet', async function (accounts) {
         });
     });
 
-    it("Should not allow any tokens after the crowdasle is finalized, but before 6 months", async () => {
-
+    it("Should not allow any tokens after the crowdsale is finalized, but before 6 months", async () => {
         //set mock time so that the crowdsale has ended
         await crowdsale.setMockedTime(endTime + 1);
         await crowdsale.finalize();
@@ -86,7 +84,18 @@ contract('VestedWallet', async function (accounts) {
         //the foundation starts off with config.foundation.amount, but shouldn't receive any more tokens until after the tokens vest
         assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount, "Vested tokens transferred before vested period began");
     });
-    
+
+    it("Should not allow transfer to occur even after 6 months unless the crowdsale was finalized", async () => {
+        const sixMonths = Math.floor(+ new Date() / 1000) + 15770000 + 600; //6 months + 10 minutes
+        await vestedWallet.setMockedTime(sixMonths);
+
+        await assertFail(async function() {
+            await vestedWallet.collectTokens({from: foundationWallet});
+        });
+
+        //the foundation starts off with config.foundation.amount, but shouldn't receive any more tokens until after the tokens vest
+        assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount, "Vested tokens transferred before vested period began");
+    });
 
 
 });
