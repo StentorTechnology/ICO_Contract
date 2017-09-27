@@ -39,7 +39,6 @@ contract('StentorToken', async function (accounts) {
         assert.equal(await token.balanceOf(vestedWallet.address), config.team.amount);
         assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount);
     });
-
 });
 
 contract('VestedWallet', async function (accounts) {
@@ -97,5 +96,22 @@ contract('VestedWallet', async function (accounts) {
         assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount, "Vested tokens transferred before vested period began");
     });
 
+    it("Should allow the transfer of some vested tokens six months after the crowdsale was finalized", async () => {
+        await crowdsale.setMockedTime(endTime + 1);
+        await crowdsale.finalize();
+        const oneYear = (await crowdsale.finalizedTime()).toNumber() + (86400 * 360);
 
+        await vestedWallet.setMockedTime(oneYear);
+        await vestedWallet.collectTokens({from: foundationWallet});
+
+        const totalSupply = await token.totalSupply.call();
+        const balance = await token.balanceOf(foundationWallet);
+        const teamOwned = config.team.amount / config.initialSupply; //percentage of totalSupply that the team (not foundation) owns
+
+        //calculate how many tokens the foundation should have after one year
+        //calculatedTokens = foundation initial amount + 50% of team's vested tokens
+        const calculatedTokens = web3.fromWei(totalSupply.mul(teamOwned).mul(.50).add(config.foundation.amount)).toNumber();
+        const realTokens = web3.fromWei(balance).toNumber();
+        assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
+    });
 });
