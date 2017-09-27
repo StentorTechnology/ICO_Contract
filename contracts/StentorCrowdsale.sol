@@ -39,6 +39,8 @@ contract StentorCrowdsale is Pausable {
 
     bool public isFinalized = false;
 
+    uint256 public finalizedTime = 0;
+
     event Finalized();
 
     /**
@@ -133,6 +135,7 @@ contract StentorCrowdsale is Pausable {
         Finalized();
 
         isFinalized = true;
+        finalizedTime = now;
     }
 
     // vault finalization task, called when owner calls finalize()
