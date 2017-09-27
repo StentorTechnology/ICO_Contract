@@ -55,7 +55,7 @@ contract StentorCrowdsale is Pausable {
 
     function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, address _vault, address _token) {
 
-        require(_startTime >= now);
+        require(_startTime >= getTime());
         require(_endTime >= _startTime);
         require(_rate > 0);
         require(_goal > 0);
@@ -105,14 +105,14 @@ contract StentorCrowdsale is Pausable {
 
     // @return true if the transaction can buy tokens
     function validPurchase() internal constant returns (bool) {
-        bool withinPeriod = now >= startTime && now <= endTime;
+        bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
         bool nonZeroPurchase = msg.value != 0;
         return withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public constant returns (bool) {
-        return now > endTime;
+        return getTime() > endTime;
     }
 
     // if crowdsale is unsuccessful, investors can claim refunds here
@@ -135,7 +135,7 @@ contract StentorCrowdsale is Pausable {
         Finalized();
 
         isFinalized = true;
-        finalizedTime = now;
+        finalizedTime = getTime();
     }
 
     // vault finalization task, called when owner calls finalize()
@@ -151,6 +151,8 @@ contract StentorCrowdsale is Pausable {
         return weiRaised >= goal;
     }
 
-
-
+    //returns the current time, overridden in mock files for testing purposes
+    function getTime() internal returns (uint) {
+        return now;
+    }
 }
