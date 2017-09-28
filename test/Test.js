@@ -60,7 +60,7 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Should not allow transfer to occur even after 6 months unless the crowdsale was finalized", async () => {
-        const sixMonths = Math.floor(+ new Date() / 1000) + 15770000 + 600; //6 months + 10 minutes
+        const sixMonths = Math.floor(+ new Date() / 1000) + (86400 * 180) + 1; //6 months
         await vestedWallet.setMockedTime(sixMonths);
 
         await assertFail(async function() {
