@@ -107,12 +107,14 @@ contract StentorCrowdsale is Pausable {
     function validPurchase() internal constant returns (bool) {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        return withinPeriod && nonZeroPurchase;
+        bool withinCap = weiRaised.add(msg.value) <= cap;
+        return withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public constant returns (bool) {
-        return getTime() > endTime;
+        bool capReached = weiRaised >= cap;
+        return capReached || getTime() > endTime;
     }
 
     // if crowdsale is unsuccessful, investors can claim refunds here
