@@ -17,6 +17,4 @@ contract StentorToken is PausableToken {
         balances[msg.sender] = _initialAmount;
         totalSupply = _initialAmount;
     }
-
-
 }
