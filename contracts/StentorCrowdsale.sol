@@ -79,7 +79,7 @@ contract StentorCrowdsale is Pausable {
     }
 
     // low level token purchase function
-    function buyTokens(address beneficiary) public payable {
+    function buyTokens(address beneficiary) whenNotPaused public payable {
         require(beneficiary != 0x0);
         require(validPurchase());
 
@@ -118,7 +118,7 @@ contract StentorCrowdsale is Pausable {
     }
 
     // if crowdsale is unsuccessful, investors can claim refunds here
-    function claimRefund() public {
+    function claimRefund() whenNotPaused public {
         require(isFinalized);
         require(!goalReached());
 
@@ -129,7 +129,7 @@ contract StentorCrowdsale is Pausable {
      * @dev Must be called after crowdsale ends, to do some extra finalization
      * work. Calls the contract's finalization function.
      */
-    function finalize() onlyOwner public {
+    function finalize() whenNotPaused onlyOwner public {
         require(!isFinalized);
         require(hasEnded());
 
@@ -141,7 +141,7 @@ contract StentorCrowdsale is Pausable {
     }
 
     // vault finalization task, called when owner calls finalize()
-    function finalization() internal {
+    function finalization() whenNotPaused internal {
         if (goalReached()) {
             vault.close();
         } else {
