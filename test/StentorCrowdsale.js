@@ -2,6 +2,7 @@ let StentorToken = artifacts.require('./StentorToken.sol');
 let StentorCrowdsale = artifacts.require('./test/StentorCrowdsaleMock.sol');
 let RefundVault = artifacts.require('./zeppelin/contracts/crowdsale/RefundVault.sol');
 let VestedWallet = artifacts.require('./test/VestedWalletMock.sol');
+let MultiSigWallet = artifacts.require('./MultiSigWallet.sol');
 
 let config = require('./../config');
 const assertFail = require("./helpers/assertFail");
@@ -9,22 +10,22 @@ const waitForEvents = require("./helpers/waitForEvents");
 
 contract('StentorCrowdsale', async function (accounts) {
 
-    let token, crowdsale, vault, vestedWallet, startTime, endTime;
-    const crowdsaleWallet = accounts[0];
-    const foundationWallet = accounts[2];
+    let token, crowdsale, vault, vestedWallet, startTime, endTime, foundationWallet;
+    const signers = [accounts[2]];
 
     beforeEach(async () => {
         startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
         endTime = Math.floor(+new Date() / 1000) + 3600; //1 hour into the future
 
-        vault = await RefundVault.new(crowdsaleWallet);
+        foundationWallet = await MultiSigWallet.new(signers, signers.length);
+        vault = await RefundVault.new(foundationWallet.address);
         token = await StentorToken.new(config.initialSupply);
         crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, vault.address, token.address);
-        vestedWallet = await VestedWallet.new(foundationWallet, crowdsale.address, token.address, {from: foundationWallet});
+        vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
 
         await token.transfer(crowdsale.address, config.cap);
         await token.transfer(vestedWallet.address, config.team.amount);
-        await token.transfer(foundationWallet, config.foundation.amount);
+        await token.transfer(foundationWallet.address, config.foundation.amount);
 
         //transfer control of the vault to the crowdsale
         await vault.transferOwnership(crowdsale.address);
@@ -37,12 +38,12 @@ contract('StentorCrowdsale', async function (accounts) {
     it("Token correctly transferred initialSupply", async () => {
         assert.equal(await token.balanceOf(crowdsale.address), config.cap);
         assert.equal(await token.balanceOf(vestedWallet.address), config.team.amount);
-        assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount);
+        assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount);
     });
 
     it("Should not allow any tokens to be transferred before the crowdsale ends", async () => {
         await assertFail(async function () {
-            await vestedWallet.collectTokens({from: foundationWallet});
+            await vestedWallet.collectTokens({from: foundationWallet.address});
         });
     });
 
@@ -51,24 +52,26 @@ contract('StentorCrowdsale', async function (accounts) {
         await crowdsale.setMockedTime(endTime + 1);
         await crowdsale.finalize();
 
-        await assertFail(async function() {
-            await vestedWallet.collectTokens({from: foundationWallet});
+        await foundationWallet.submitTransaction(vestedWallet.address, 0, vestedWallet.contract.collectTokens.getData(), {
+            from: signers[0],
+            gas: 1000000
         });
 
         //the foundation starts off with config.foundation.amount, but shouldn't receive any more tokens until after the tokens vest
-        assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount, "Vested tokens transferred before vested period began");
+        assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount, "Vested tokens transferred before vested period began");
     });
 
     it("Should not allow transfer to occur even after 6 months unless the crowdsale was finalized", async () => {
-        const sixMonths = Math.floor(+ new Date() / 1000) + (86400 * 180) + 1; //6 months
+        const sixMonths = Math.floor(+new Date() / 1000) + (86400 * 180) + 1; //6 months
         await vestedWallet.setMockedTime(sixMonths);
 
-        await assertFail(async function() {
-            await vestedWallet.collectTokens({from: foundationWallet});
+        await foundationWallet.submitTransaction(vestedWallet.address, 0, vestedWallet.contract.collectTokens.getData(), {
+            from: signers[0],
+            gas: 1000000
         });
 
         //the foundation starts off with config.foundation.amount, but shouldn't receive any more tokens until after the tokens vest
-        assert.equal(await token.balanceOf(foundationWallet), config.foundation.amount, "Vested tokens transferred before vested period began");
+        assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount, "Vested tokens transferred before vested period began");
     });
 
     it("Should allow the transfer of some vested tokens six months after the crowdsale was finalized", async () => {
@@ -77,10 +80,13 @@ contract('StentorCrowdsale', async function (accounts) {
         const oneYear = (await crowdsale.finalizedTime()).toNumber() + (86400 * 360);
 
         await vestedWallet.setMockedTime(oneYear);
-        await vestedWallet.collectTokens({from: foundationWallet});
+        await foundationWallet.submitTransaction(vestedWallet.address, 0, vestedWallet.contract.collectTokens.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
 
         const totalSupply = await token.totalSupply.call();
-        const balance = await token.balanceOf(foundationWallet);
+        const balance = await token.balanceOf(foundationWallet.address);
         const teamOwned = config.team.amount / config.initialSupply; //percentage of totalSupply that the team (not foundation) owns
 
         //calculate how many tokens the foundation should have after one year
@@ -96,10 +102,13 @@ contract('StentorCrowdsale', async function (accounts) {
         const twoYears = (await crowdsale.finalizedTime()).toNumber() + (86400 * 360 * 2);
 
         await vestedWallet.setMockedTime(twoYears);
-        await vestedWallet.collectTokens({from: foundationWallet});
+        await foundationWallet.submitTransaction(vestedWallet.address, 0, vestedWallet.contract.collectTokens.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
 
         const totalSupply = await token.totalSupply.call();
-        const balance = await token.balanceOf(foundationWallet);
+        const balance = await token.balanceOf(foundationWallet.address);
         const teamOwned = config.team.amount / config.initialSupply; //percentage of totalSupply that the team (not foundation) owns
 
         //calculate how many tokens the foundation should have after one year

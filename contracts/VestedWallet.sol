@@ -44,12 +44,12 @@ pragma solidity ^0.4.11;
 
 import "./StentorToken.sol";
 import "./StentorCrowdsale.sol";
-import "./Owned.sol";
 import "zeppelin/contracts/math/SafeMath.sol";
 import "zeppelin/contracts/token/BasicToken.sol";
+import "zeppelin/contracts/ownership/Ownable.sol";
 
 
-contract VestedWallet is Owned {
+contract VestedWallet is Ownable {
     using SafeMath for uint256;
 
     uint256 collectedTokens;
