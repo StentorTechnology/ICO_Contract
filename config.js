@@ -12,5 +12,7 @@ module.exports = {
 
     foundation: {
         amount: 250000000 * Math.pow(10, 18)
-    } // Receives SGT
+    }, // Receives SGT
+
+    individualCap: 10 * Math.pow(10, 18) //10 ETH
 };

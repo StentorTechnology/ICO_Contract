@@ -13,13 +13,13 @@ module.exports = async function(deployer, network, accounts) {
     await deployer.deploy(FoundationMultiSig, signers, 2);
     await deployer.deploy(StentorToken, config.initialSupply);
     await deployer.deploy(RefundVault, FoundationMultiSig.address);
-    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, RefundVault.address, StentorToken.address, {gas: 999999});
+    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, config.individualCap, RefundVault.address, StentorToken.address, {gas: 999999});
     await deployer.deploy(VestedWallet, FoundationMultiSig.address, StentorCrowdsale.address, StentorToken.address);
 
     //allocate SGT for the crowdsale, team, and foundation
     await StentorToken.deployed().then(async (token) => {
         // await token.transfer(StentorCrowdsale.address, config.cap);
-        // the foundation will control the cap so for pre-sale purposes
+        // the foundation will control the cap for pre-sale purposes
         await token.transfer(FoundationMultiSig.address, config.cap);
         await token.transfer(VestedWallet.address, config.team.amount);
         await token.transfer(FoundationMultiSig.address, config.foundation.amount);

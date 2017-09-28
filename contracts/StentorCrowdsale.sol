@@ -20,6 +20,7 @@ contract StentorCrowdsale is Pausable {
 
     // start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
+
     uint256 public endTime;
 
     // refund vault used to hold funds while crowdsale is running
@@ -37,9 +38,13 @@ contract StentorCrowdsale is Pausable {
     //hard cap in wei
     uint256 public cap;
 
+    uint256 public individualCap;
+
     bool public isFinalized = false;
 
     uint256 public finalizedTime = 0;
+
+    mapping (address => bool) public approvedContributors;
 
     event Finalized();
 
@@ -53,7 +58,7 @@ contract StentorCrowdsale is Pausable {
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, address _vault, address _token) {
+    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token) {
 
         require(_startTime >= getTime());
         require(_endTime >= _startTime);
@@ -61,6 +66,7 @@ contract StentorCrowdsale is Pausable {
         require(_goal > 0);
         require(_cap > 0);
         require(_cap > _goal);
+        require(_individualCap > 0);
         require(_vault != 0x0);
         require(_token != 0x0);
 
@@ -69,12 +75,33 @@ contract StentorCrowdsale is Pausable {
         rate = _rate;
         goal = _goal;
         cap = _cap;
+        individualCap = _individualCap;
         vault = RefundVault(_vault);
         token = StentorToken(_token);
     }
 
+    function approveContributor(address contributor) public onlyOwner {
+        approvedContributors[contributor] = true;
+    }
+
+    function removeContributor(address contributor) public onlyOwner {
+        approvedContributors[contributor] = false;
+    }
+
+    function approveContributors(address[] contributors) public onlyOwner {
+        for (uint256 i = 0; i < contributors.length; i++) {
+            approveContributor(contributors[i]);
+        }
+    }
+
+    function removeContributors(address[] contributors) public onlyOwner {
+        for (uint256 i = 0; i < contributors.length; i++) {
+            removeContributor(contributors[i]);
+        }
+    }
+
     // fallback function can be used to buy tokens
-    function () payable {
+    function() payable {
         buyTokens(msg.sender);
     }
 
@@ -108,7 +135,9 @@ contract StentorCrowdsale is Pausable {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
         bool nonZeroPurchase = msg.value != 0;
         bool withinCap = weiRaised.add(msg.value) <= cap;
-        return withinCap && withinPeriod && nonZeroPurchase;
+        bool isApproved = approvedContributors[msg.sender];
+        bool individualCapReached = msg.value > individualCap;
+        return !individualCapReached && isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
@@ -144,7 +173,8 @@ contract StentorCrowdsale is Pausable {
     function finalization() whenNotPaused internal {
         if (goalReached()) {
             vault.close();
-        } else {
+        }
+        else {
             vault.enableRefunds();
         }
     }

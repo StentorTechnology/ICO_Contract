@@ -20,7 +20,7 @@ contract('StentorCrowdsale', async function (accounts) {
         foundationWallet = await MultiSigWallet.new(signers, signers.length);
         vault = await RefundVault.new(foundationWallet.address);
         token = await StentorToken.new(config.initialSupply);
-        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, vault.address, token.address);
+        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address);
         vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
 
         await token.transfer(crowdsale.address, config.cap);
