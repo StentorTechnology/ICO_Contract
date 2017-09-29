@@ -29,6 +29,9 @@ contract('StentorCrowdsale', async function (accounts) {
 
         //transfer control of the vault to the crowdsale
         await vault.transferOwnership(crowdsale.address);
+
+        //transfer control of the crowdsale to the foundation's multisig
+        await crowdsale.transferOwnership(foundationWallet.address);
     });
 
     it("Token deployed correctly with the right symbol", async () => {
@@ -50,7 +53,11 @@ contract('StentorCrowdsale', async function (accounts) {
     it("Should not allow any tokens after the crowdsale is finalized, but before 6 months", async () => {
         //set mock time so that the crowdsale has ended
         await crowdsale.setMockedTime(endTime + 1);
-        await crowdsale.finalize();
+
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
 
         await foundationWallet.submitTransaction(vestedWallet.address, 0, vestedWallet.contract.collectTokens.getData(), {
             from: signers[0],
@@ -76,7 +83,10 @@ contract('StentorCrowdsale', async function (accounts) {
 
     it("Should allow the transfer of some vested tokens six months after the crowdsale was finalized", async () => {
         await crowdsale.setMockedTime(endTime + 1);
-        await crowdsale.finalize();
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
         const oneYear = (await crowdsale.finalizedTime()).toNumber() + (86400 * 360);
 
         await vestedWallet.setMockedTime(oneYear);
@@ -98,7 +108,10 @@ contract('StentorCrowdsale', async function (accounts) {
 
     it("Tokens should fully vest two years after the crowdsale has ended", async () => {
         await crowdsale.setMockedTime(endTime + 1);
-        await crowdsale.finalize();
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
         const twoYears = (await crowdsale.finalizedTime()).toNumber() + (86400 * 360 * 2);
 
         await vestedWallet.setMockedTime(twoYears);

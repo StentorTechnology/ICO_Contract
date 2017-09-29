@@ -29,4 +29,9 @@ module.exports = async function(deployer, network, accounts) {
     await RefundVault.deployed().then(async (vault) => {
        vault.transferOwnership(StentorCrowdsale.address);
     });
+
+    //transfer control of the crowdsale to the foundation's multisig
+    await StentorCrowdsale.deployed().then(async (crowdsale) => {
+       crowdsale.transferOwnership(FoundationMultiSig.address);
+    });
 };
