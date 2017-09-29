@@ -48,6 +48,9 @@ contract StentorCrowdsale is Pausable {
     //the amount each approved contributor has made
     mapping (address => uint256) public contributedAmount;
 
+    event ApprovedContributor(address contributor);
+    event RemovedContributor(address contributor);
+
     event Finalized();
 
     /**
@@ -84,10 +87,12 @@ contract StentorCrowdsale is Pausable {
 
     function approveContributor(address contributor) public onlyOwner {
         approvedContributors[contributor] = true;
+        ApprovedContributor(contributor);
     }
 
     function removeContributor(address contributor) public onlyOwner {
         approvedContributors[contributor] = false;
+        RemovedContributor(contributor);
     }
 
     function approveContributors(address[] contributors) public onlyOwner {
@@ -104,12 +109,11 @@ contract StentorCrowdsale is Pausable {
 
     // fallback function can be used to buy tokens
     function() payable {
-        buyTokens(msg.sender);
+        buyTokens();
     }
 
     // low level token purchase function
-    function buyTokens(address beneficiary) whenNotPaused public payable {
-        require(beneficiary != 0x0);
+    function buyTokens() whenNotPaused public payable {
         require(validPurchase());
 
         uint256 weiAmount = msg.value;
@@ -122,8 +126,8 @@ contract StentorCrowdsale is Pausable {
 
         contributedAmount[msg.sender] = contributedAmount[msg.sender].add(weiAmount);
 
-        token.transfer(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+        token.transfer(msg.sender, tokens);
+        TokenPurchase(msg.sender, msg.sender, weiAmount, tokens);
 
         forwardFunds();
     }
@@ -140,7 +144,7 @@ contract StentorCrowdsale is Pausable {
         bool nonZeroPurchase = msg.value != 0;
         bool withinCap = weiRaised.add(msg.value) <= cap;
         bool isApproved = approvedContributors[msg.sender];
-        bool individualCapReached = msg.value > individualCap.sub(contributedAmount[msg.sender]);
+        bool individualCapReached = contributedAmount[msg.sender].add(msg.value) > individualCap;
         return !individualCapReached && isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
