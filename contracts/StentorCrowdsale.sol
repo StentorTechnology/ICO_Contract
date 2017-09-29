@@ -60,7 +60,7 @@ contract StentorCrowdsale is Pausable {
      * @param value weis paid for purchase
      * @param amount amount of tokens purchased
      */
-    event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+    event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
 
 
     function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token) {
@@ -127,7 +127,7 @@ contract StentorCrowdsale is Pausable {
         contributedAmount[msg.sender] = contributedAmount[msg.sender].add(weiAmount);
 
         token.transfer(msg.sender, tokens);
-        TokenPurchase(msg.sender, msg.sender, weiAmount, tokens);
+        TokenPurchase(msg.sender, weiAmount, tokens);
 
         forwardFunds();
     }
