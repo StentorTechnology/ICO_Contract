@@ -20,7 +20,6 @@ contract StentorCrowdsale is Pausable {
 
     // start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
-
     uint256 public endTime;
 
     // refund vault used to hold funds while crowdsale is running
@@ -41,10 +40,13 @@ contract StentorCrowdsale is Pausable {
     uint256 public individualCap;
 
     bool public isFinalized = false;
-
     uint256 public finalizedTime = 0;
 
+    //users that are approved to contribute
     mapping (address => bool) public approvedContributors;
+
+    //the amount each approved contributor has made
+    mapping (address => uint256) public contributedAmount;
 
     event Finalized();
 
@@ -118,6 +120,8 @@ contract StentorCrowdsale is Pausable {
         // update state
         weiRaised = weiRaised.add(weiAmount);
 
+        contributedAmount[msg.sender] = contributedAmount[msg.sender].add(weiAmount);
+
         token.transfer(beneficiary, tokens);
         TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
@@ -136,7 +140,7 @@ contract StentorCrowdsale is Pausable {
         bool nonZeroPurchase = msg.value != 0;
         bool withinCap = weiRaised.add(msg.value) <= cap;
         bool isApproved = approvedContributors[msg.sender];
-        bool individualCapReached = msg.value > individualCap;
+        bool individualCapReached = msg.value > individualCap.sub(contributedAmount[msg.sender]);
         return !individualCapReached && isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
