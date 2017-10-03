@@ -2,7 +2,7 @@ pragma solidity ^0.4.15;
 
 import '../StentorCrowdsale.sol';
 
-// @dev DevTokensHolderMock mocks current block number
+// @dev DevTokensHolderMock mocks current time
 
 contract StentorCrowdsaleMock is StentorCrowdsale {
 

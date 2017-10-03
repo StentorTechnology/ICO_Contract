@@ -6,7 +6,9 @@ let MultiSigWallet = artifacts.require('./MultiSigWallet.sol');
 
 let config = require('./../config');
 const assertFail = require("./helpers/assertFail");
-const waitForEvents = require("./helpers/waitForEvents");
+const hashMessage = require('./helpers/hashMessage.js');
+
+// const waitForEvents = require("./helpers/waitForEvents");
 
 contract('StentorCrowdsale', async function (accounts) {
 
@@ -126,10 +128,23 @@ contract('StentorCrowdsale', async function (accounts) {
         const teamOwned = config.team.amount / config.initialSupply; //percentage of totalSupply that the team (not foundation) owns
 
         //calculate how many tokens the foundation should have after one year
-        //calculatedTokens = foundation initial amount + 50% of team's vested tokens
+        //calculatedTokens = foundation initial amount + 100% of team's vested tokens
         const calculatedTokens = web3.fromWei(totalSupply.mul(teamOwned).add(config.foundation.amount)).toNumber();
         const realTokens = web3.fromWei(balance).toNumber();
         assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
+    });
+
+    it("Must provide valid signature for contribution to go through", async () => {
+        const contributor = accounts[1];
+        const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
+        const contributing = web3.toWei(1, 'wei');
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
     });
 
 });

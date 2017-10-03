@@ -9,14 +9,17 @@ let StentorCrowdsaleMock = artifacts.require('./test/StentorCrowdsaleMock.sol');
 const config  = require('./../config.js');
 
 module.exports = async function(deployer, network, accounts) {
-
     const signers = [accounts[2], accounts[3], accounts[4]];
     const signer = accounts[0]; //individual who signs txn's to join the crowdsale
+
+    await deployer.deploy(ECRecovery);
+    await deployer.link(ECRecovery, StentorCrowdsaleMock);
+    await deployer.link(ECRecovery, StentorCrowdsale);
 
     await deployer.deploy(FoundationMultiSig, signers, 2);
     await deployer.deploy(StentorToken, config.initialSupply);
     await deployer.deploy(RefundVault, FoundationMultiSig.address);
-    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, config.individualCap, RefundVault.address, StentorToken.address, signer, {gas: 999999});
+    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, config.individualCap, RefundVault.address, StentorToken.address, signer, {gas: 4712388});
     await deployer.deploy(VestedWallet, FoundationMultiSig.address, StentorCrowdsale.address, StentorToken.address);
 
     //allocate SGT for the crowdsale, team, and foundation

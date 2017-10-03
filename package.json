@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "ethereumjs-testrpc": "^4.0.1",
+    "ethereumjs-util": "^5.1.2",
     "solium": "^0.5.5",
     "truffle": "^3.4.7"
   }
