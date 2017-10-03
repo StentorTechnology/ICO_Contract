@@ -147,4 +147,88 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
     });
 
+    it("Cannot contribute beyond specified individual cap", async () => {
+        const contributor = accounts[1];
+        const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
+        const contributing = config.individualCap;
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
+
+        await crowdsale.setMockedTime(startTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to exceed individual cap");
+    });
+
+    it("Contributions can only be made during the crowdsale", async () => {
+        const contributor = accounts[1];
+        const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime - 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: 1, from: contributor});
+        });
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber(), "Contributor was able to purchase tokens before the start");
+
+        await crowdsale.setMockedTime(endTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the end");
+    });
+
+    it("Contributions cannot be made once the hard cap has been hit", async () => {
+        //deploy with hard cap == individual cap for easier testing
+        startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
+        endTime = Math.floor(+new Date() / 1000) + 3600; //1 hour into the future
+
+        foundationWallet = await MultiSigWallet.new(signers, signers.length);
+        vault = await RefundVault.new(foundationWallet.address);
+        token = await StentorToken.new(config.initialSupply);
+        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, 1, config.individualCap, config.individualCap, vault.address, token.address, signer);
+        vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
+
+        await token.transfer(crowdsale.address, config.cap);
+        await token.transfer(vestedWallet.address, config.team.amount);
+        await token.transfer(foundationWallet.address, config.foundation.amount);
+
+        //transfer control of the vault to the crowdsale
+        await vault.transferOwnership(crowdsale.address);
+
+        //transfer control of the crowdsale to the foundation's multisig
+        await crowdsale.transferOwnership(foundationWallet.address);
+
+        const contributor = accounts[1];
+        const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
+        const contributing = config.individualCap - 1;
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
+
+        await assertFail(async function () {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the hard cap was hit");
+    });
+
+
 });
