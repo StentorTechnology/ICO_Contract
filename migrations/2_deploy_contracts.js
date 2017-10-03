@@ -3,17 +3,20 @@ let StentorToken = artifacts.require('./StentorToken.sol');
 let RefundVault = artifacts.require('./zeppelin/contracts/crowdsale/RefundVault.sol');
 let VestedWallet = artifacts.require('./VestedWallet.sol');
 let FoundationMultiSig = artifacts.require('./MultiSigWallet.sol');
+let ECRecovery = artifacts.require('./zeppelin/contracts/ECRecovery.sol');
+let StentorCrowdsaleMock = artifacts.require('./test/StentorCrowdsaleMock.sol');
 
 const config  = require('./../config.js');
 
 module.exports = async function(deployer, network, accounts) {
 
     const signers = [accounts[2], accounts[3], accounts[4]];
+    const signer = accounts[0]; //individual who signs txn's to join the crowdsale
 
     await deployer.deploy(FoundationMultiSig, signers, 2);
     await deployer.deploy(StentorToken, config.initialSupply);
     await deployer.deploy(RefundVault, FoundationMultiSig.address);
-    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, config.individualCap, RefundVault.address, StentorToken.address, {gas: 999999});
+    await deployer.deploy(StentorCrowdsale, config.startTime, config.endTime, config.rate, config.goal, config.cap, config.individualCap, RefundVault.address, StentorToken.address, signer, {gas: 999999});
     await deployer.deploy(VestedWallet, FoundationMultiSig.address, StentorCrowdsale.address, StentorToken.address);
 
     //allocate SGT for the crowdsale, team, and foundation
