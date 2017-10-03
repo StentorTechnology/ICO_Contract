@@ -150,22 +150,16 @@ contract('StentorCrowdsale', async function (accounts) {
     it("Cannot contribute beyond specified individual cap", async () => {
         const contributor = accounts[1];
         const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
-        const contributing = config.individualCap;
+        const contributing = web3.toBigNumber(config.individualCap).plus(1);
 
         const beforeTokens = await token.balanceOf(contributor);
         await crowdsale.setMockedTime(startTime + 1);
-        await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        assertFail(async () => {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        });
         const afterTokens = await token.balanceOf(contributor);
 
-        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
-
-        await crowdsale.setMockedTime(startTime + 1);
-        await assertFail(async function () {
-            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: 1, from: contributor});
-        });
-        const sameAmountOfTokens = await token.balanceOf(contributor);
-
-        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to exceed individual cap");
+        assert.equal(beforeTokens.toNumber(), afterTokens.toNumber(), "Contributor was able to exceed individual cap");
     });
 
     it("Contributions can only be made during the crowdsale", async () => {
@@ -213,7 +207,7 @@ contract('StentorCrowdsale', async function (accounts) {
 
         const contributor = accounts[1];
         const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
-        const contributing = config.individualCap - 1;
+        const contributing = config.individualCap;
 
         const beforeTokens = await token.balanceOf(contributor);
         await crowdsale.setMockedTime(startTime + 1);

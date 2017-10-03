@@ -5,5 +5,5 @@ module.exports = async function(callback) {
     } catch (error) {
         if (error.message.search("invalid opcode")) web3_error_thrown = true;
     }
-    assert.ok(web3_error_thrown, "Transaction should fail");
+    assert.equal(web3_error_thrown, true, "Transaction should fail");
 };

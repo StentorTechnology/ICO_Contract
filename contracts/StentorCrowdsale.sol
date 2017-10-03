@@ -123,8 +123,8 @@ contract StentorCrowdsale is Pausable {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
         bool nonZeroPurchase = msg.value != 0;
         bool withinCap = weiRaised.add(msg.value) <= cap;
-        bool individualCapReached = contributedAmount[msg.sender].add(msg.value) > individualCap;
-        return !individualCapReached && withinCap && withinPeriod && nonZeroPurchase;
+        bool withinIndividualCap = contributedAmount[msg.sender].add(msg.value) <= individualCap;
+        return withinIndividualCap && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if the server signed off on msg.sender, thus allowing them to contribute
