@@ -230,5 +230,26 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the hard cap was hit");
     });
 
+    it("Should not allow contributions to go through if the contract has been paused", async () => {
+        const contributor = accounts[1];
+        const signature = web3.eth.sign(signer, web3.sha3(contributor, {encoding: 'hex'}));
+        const contributing = web3.toWei(1, 'wei');
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime + 1);
+
+        //pause crowdsale
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.pause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        await assertFail(async function () {
+            await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        });
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber(), "Contributor was able to buy tokens while the campaign was paused");
+    });
 
 });
