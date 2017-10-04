@@ -241,9 +241,20 @@ contract('StentorCrowdsale', async function (accounts) {
         await assertFail(async function () {
             await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
         });
-        const afterTokens = await token.balanceOf(contributor);
+        let afterTokens = await token.balanceOf(contributor);
 
         assert.equal(beforeTokens.toNumber(), afterTokens.toNumber(), "Contributor was able to buy tokens while the campaign was paused");
+
+        //un-pause crowdsale
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.unpause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        await crowdsale.buyTokens(hashMessage(contributor), signature, {value: contributing, from: contributor});
+        afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens.toNumber(), parseInt(afterTokens.toNumber()) - config.rate * contributing, "Contributor did not receive the correct amount of tokens");
     });
 
 });
