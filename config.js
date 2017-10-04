@@ -14,5 +14,5 @@ module.exports = {
         amount: 250000000 * Math.pow(10, 18)
     }, // Receives SGT
 
-    individualCap: 10000000000000000000 //10 ETH
+    individualCap: 10 * Math.pow(10, 18) //10 ETH
 };
