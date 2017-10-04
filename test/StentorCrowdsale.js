@@ -243,7 +243,7 @@ contract('StentorCrowdsale', async function (accounts) {
         });
         const afterTokens = await token.balanceOf(contributor);
 
-        assert.equal(beforeTokens, afterTokens.toNumber(), "Contributor was able to buy tokens while the campaign was paused");
+        assert.equal(beforeTokens.toNumber(), afterTokens.toNumber(), "Contributor was able to buy tokens while the campaign was paused");
     });
 
 });
