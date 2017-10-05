@@ -176,6 +176,8 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Contributions can only be made during the crowdsale", async() => {
+        await crowdsale.approveContributor(contributor, {from: controller});
+
         const beforeTokens = await token.balanceOf(contributor);
         await crowdsale.setMockedTime(startTime - 1);
         await assertFail(async function () {
@@ -192,6 +194,27 @@ contract('StentorCrowdsale', async function (accounts) {
         const sameAmountOfTokens = await token.balanceOf(contributor);
 
         assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the end");
+    });
+
+    it("Should not allow contributions if the hard cap has been hit", async () => {
+        //set mock hardcap == individual cap for easier testing
+        await crowdsale.setMockedCap(config.individualCap);
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        const beforeTokens = await token.balanceOf(contributor);
+        const contribution = config.individualCap;
+        await crowdsale.buyTokens({value: contribution, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the hard cap was hit");
     });
 
 });
