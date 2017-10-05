@@ -8,8 +8,8 @@ const config  = require('./../config.js');
 
 module.exports = async function(deployer, network, accounts) {
 
-    const signers = [accounts[1], accounts[2], accounts[3]]; // foundation multisig
-    const controller = accounts[0]; // approves or removes contributor
+    const signers = [accounts[2], accounts[3], accounts[4]]; // foundation multisig
+    const controller = accounts[1]; // approves or removes contributor
 
     await deployer.deploy(FoundationMultiSig, signers, 2);
     await deployer.deploy(StentorToken, config.initialSupply);

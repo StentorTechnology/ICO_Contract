@@ -11,9 +11,9 @@ const waitForEvents = require("./helpers/waitForEvents");
 contract('StentorCrowdsale', async function (accounts) {
 
     let token, crowdsale, vault, vestedWallet, startTime, endTime, foundationWallet;
-    const signers = [accounts[0]];
-    const controller = accounts[1];
-    const contributor = accounts[2];
+    const signers = [accounts[1]];
+    const controller = accounts[2];
+    const contributor = accounts[3];
 
     beforeEach(async () => {
         startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
