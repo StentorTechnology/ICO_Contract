@@ -132,6 +132,23 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
     });
 
+    it("Controlled can only be changed by the owner", async () => {
+        const newController = accounts[2];
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.changeController.getData(newController), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        assert.equal(await crowdsale.controller(), newController, "Controller was not changed succesfully");
+
+        //ensure no one else can change the controller but the owner
+        await assertFail(async function() {
+           await crowdsale.changeController(accounts[3], {from: accounts[3]});
+        });
+
+        assert.equal(await crowdsale.controller(), newController, "Controller was changed by non-owner");
+    });
+
     it("Only an approved contributor can make a contribution", async () => {
         const contributor = accounts[0];
         const contribution = 1;
