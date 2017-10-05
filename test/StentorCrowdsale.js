@@ -12,6 +12,7 @@ contract('StentorCrowdsale', async function (accounts) {
 
     let token, crowdsale, vault, vestedWallet, startTime, endTime, foundationWallet;
     const signers = [accounts[2]];
+    const controller = accounts[1];
 
     beforeEach(async () => {
         startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
@@ -20,7 +21,7 @@ contract('StentorCrowdsale', async function (accounts) {
         foundationWallet = await MultiSigWallet.new(signers, signers.length);
         vault = await RefundVault.new(foundationWallet.address);
         token = await StentorToken.new(config.initialSupply);
-        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address);
+        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address, controller);
         vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
 
         await token.transfer(crowdsale.address, config.cap);
@@ -129,6 +130,9 @@ contract('StentorCrowdsale', async function (accounts) {
         const calculatedTokens = web3.fromWei(totalSupply.mul(teamOwned).add(config.foundation.amount)).toNumber();
         const realTokens = web3.fromWei(balance).toNumber();
         assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
+    });
+
+    it("Only an approved contributor can make a contribution", async () => {
     });
 
 });

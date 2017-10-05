@@ -48,6 +48,9 @@ contract StentorCrowdsale is Pausable {
     //the amount each approved contributor has made
     mapping (address => uint256) public contributedAmount;
 
+    //address allowed to add or remove contributors
+    address public controller;
+
     event ApprovedContributor(address contributor);
     event RemovedContributor(address contributor);
 
@@ -62,7 +65,7 @@ contract StentorCrowdsale is Pausable {
     event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
 
 
-    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token) {
+    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token, address _controller) {
 
         require(_startTime >= getTime());
         require(_endTime >= _startTime);
@@ -73,6 +76,7 @@ contract StentorCrowdsale is Pausable {
         require(_individualCap > 0);
         require(_vault != 0x0);
         require(_token != 0x0);
+        require(_controller != 0x0);
 
         startTime = _startTime;
         endTime = _endTime;
@@ -82,25 +86,36 @@ contract StentorCrowdsale is Pausable {
         individualCap = _individualCap;
         vault = RefundVault(_vault);
         token = StentorToken(_token);
+        controller = _controller;
     }
 
-    function approveContributor(address contributor) public onlyOwner {
+    modifier onlyController() {
+        require(msg.sender == controller);
+        _;
+    }
+
+    function changeController(address newController) onlyOwner {
+        require(newController != 0x0);
+        controller = newController;
+    }
+
+    function approveContributor(address contributor) public onlyController {
         approvedContributors[contributor] = true;
         ApprovedContributor(contributor);
     }
 
-    function removeContributor(address contributor) public onlyOwner {
+    function removeContributor(address contributor) public onlyController {
         approvedContributors[contributor] = false;
         RemovedContributor(contributor);
     }
 
-    function approveContributors(address[] contributors) public onlyOwner {
+    function approveContributors(address[] contributors) public onlyController {
         for (uint256 i = 0; i < contributors.length; i++) {
             approveContributor(contributors[i]);
         }
     }
 
-    function removeContributors(address[] contributors) public onlyOwner {
+    function removeContributors(address[] contributors) public onlyController {
         for (uint256 i = 0; i < contributors.length; i++) {
             removeContributor(contributors[i]);
         }
