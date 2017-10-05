@@ -11,7 +11,9 @@ const waitForEvents = require("./helpers/waitForEvents");
 contract('StentorCrowdsale', async function (accounts) {
 
     let token, crowdsale, vault, vestedWallet, startTime, endTime, foundationWallet;
-    const signers = [accounts[2]];
+    const signers = [accounts[1]];
+    const controller = accounts[2];
+    const contributor = accounts[3];
 
     beforeEach(async () => {
         startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
@@ -20,7 +22,7 @@ contract('StentorCrowdsale', async function (accounts) {
         foundationWallet = await MultiSigWallet.new(signers, signers.length);
         vault = await RefundVault.new(foundationWallet.address);
         token = await StentorToken.new(config.initialSupply);
-        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address);
+        crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address, controller);
         vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
 
         await token.transfer(crowdsale.address, config.cap);
@@ -129,6 +131,110 @@ contract('StentorCrowdsale', async function (accounts) {
         const calculatedTokens = web3.fromWei(totalSupply.mul(teamOwned).add(config.foundation.amount)).toNumber();
         const realTokens = web3.fromWei(balance).toNumber();
         assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
+    });
+
+    it("Controlled can only be changed by the owner", async () => {
+        const newController = accounts[0];
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.changeController.getData(newController), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        assert.equal(await crowdsale.controller(), newController, "Controller was not changed succesfully");
+
+        //ensure no one else can change the controller but the owner
+        await assertFail(async function() {
+           await crowdsale.changeController(accounts[2], {from: accounts[2]});
+        });
+
+        assert.equal(await crowdsale.controller(), newController, "Controller was changed by non-owner");
+    });
+
+    it("Only an approved contributor can make a contribution", async () => {
+        const contribution = 1;
+
+        await crowdsale.setMockedTime(startTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({from: contributor, value: contribution});
+        });
+
+        //approve the contributor and let them try again
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await crowdsale.buyTokens({from: contributor, value: contribution});
+        assert.equal(await token.balanceOf(contributor), config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+    });
+
+    it("A contributor cannot contribute more than the individual cap, excess is refunded", async () => {
+        const contribution = web3.toBigNumber(config.individualCap).plus(1);
+
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await crowdsale.buyTokens({from: contributor, value: contribution});
+
+        assert.equal(await token.balanceOf(contributor), config.rate * config.individualCap, "Contributor exceeded the indvidual cap");
+        assert.equal(await web3.eth.getBalance(crowdsale.address), 0, "Crowdsale did not refund correctly");
+        assert.equal(await web3.eth.getBalance(vault.address), config.individualCap, "Vault did not receive the correct amount of ETH");
+    });
+
+    it("Contributions can only be made during the crowdsale", async() => {
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime - 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens.toNumber(), afterTokens.toNumber(), "Contributor was able to purchase tokens before the start");
+
+        await crowdsale.setMockedTime(endTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the end");
+    });
+
+    it("Should not allow contributions if the hard cap has been hit", async () => {
+        //set mock hardcap == individual cap for easier testing
+        await crowdsale.setMockedCap(config.individualCap);
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        const beforeTokens = await token.balanceOf(contributor);
+        const contribution = config.individualCap;
+        await crowdsale.buyTokens({value: contribution, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the hard cap was hit");
+        assert.equal(await crowdsale.hasEnded(), true, "Crowdsale hasEnded function did not return true");
+    });
+
+    it("Should not allow contributions to go through if the contract has been paused", async () => {
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.pause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.unpause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        await crowdsale.buyTokens({value: 1, from: contributor});
+        assert.equal(await token.balanceOf(contributor), config.rate, "Contributor should receive 1 wei of tokens");
     });
 
 });

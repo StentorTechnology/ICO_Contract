@@ -48,8 +48,11 @@ contract StentorCrowdsale is Pausable {
     //the amount each approved contributor has made
     mapping (address => uint256) public contributedAmount;
 
-    event ApprovedContributor(address contributor);
-    event RemovedContributor(address contributor);
+    //address allowed to add or remove contributors
+    address public controller;
+
+    event ApprovedContributor(address indexed contributor);
+    event RemovedContributor(address indexed contributor);
 
     event Finalized();
 
@@ -62,7 +65,7 @@ contract StentorCrowdsale is Pausable {
     event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
 
 
-    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token) {
+    function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token, address _controller) {
 
         require(_startTime >= getTime());
         require(_endTime >= _startTime);
@@ -73,6 +76,7 @@ contract StentorCrowdsale is Pausable {
         require(_individualCap > 0);
         require(_vault != 0x0);
         require(_token != 0x0);
+        require(_controller != 0x0);
 
         startTime = _startTime;
         endTime = _endTime;
@@ -82,25 +86,36 @@ contract StentorCrowdsale is Pausable {
         individualCap = _individualCap;
         vault = RefundVault(_vault);
         token = StentorToken(_token);
+        controller = _controller;
     }
 
-    function approveContributor(address contributor) public onlyOwner {
+    modifier onlyController() {
+        require(msg.sender == controller);
+        _;
+    }
+
+    function changeController(address newController) onlyOwner {
+        require(newController != 0x0);
+        controller = newController;
+    }
+
+    function approveContributor(address contributor) public onlyController {
         approvedContributors[contributor] = true;
         ApprovedContributor(contributor);
     }
 
-    function removeContributor(address contributor) public onlyOwner {
+    function removeContributor(address contributor) public onlyController {
         approvedContributors[contributor] = false;
         RemovedContributor(contributor);
     }
 
-    function approveContributors(address[] contributors) public onlyOwner {
+    function approveContributors(address[] contributors) public onlyController {
         for (uint256 i = 0; i < contributors.length; i++) {
             approveContributor(contributors[i]);
         }
     }
 
-    function removeContributors(address[] contributors) public onlyOwner {
+    function removeContributors(address[] contributors) public onlyController {
         for (uint256 i = 0; i < contributors.length; i++) {
             removeContributor(contributors[i]);
         }
@@ -113,9 +128,18 @@ contract StentorCrowdsale is Pausable {
 
     // low level token purchase function
     function buyTokens() whenNotPaused public payable {
-        require(validPurchase());
-
         uint256 weiAmount = msg.value;
+
+        //allow contributions only up until the cap, refund the rest
+        uint256 refundAmount = 0;
+
+        //determine if the user is trying to contribute more than the individual cap
+        if(contributedAmount[msg.sender].add(msg.value) > individualCap) {
+            refundAmount = contributedAmount[msg.sender].add(msg.value).sub(individualCap);
+            weiAmount = msg.value.sub(refundAmount);
+        }
+
+        require(validPurchase(weiAmount));
 
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
@@ -128,28 +152,32 @@ contract StentorCrowdsale is Pausable {
         token.transfer(msg.sender, tokens);
         TokenPurchase(msg.sender, weiAmount, tokens);
 
-        forwardFunds();
+        forwardFunds(weiAmount);
+
+        //refund the user the remaining wei that was not used
+        if(refundAmount > 0) {
+            msg.sender.transfer(refundAmount);
+        }
     }
 
     // In addition to sending the funds, we want to call
     // the RefundVault deposit function
-    function forwardFunds() internal {
-        vault.deposit.value(msg.value)(msg.sender);
+    function forwardFunds(uint256 weiAmount) internal {
+        vault.deposit.value(weiAmount)(msg.sender);
     }
 
     // @return true if the transaction can buy tokens
-    function validPurchase() internal constant returns (bool) {
+    function validPurchase(uint256 weiAmount) internal constant returns (bool) {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
-        bool nonZeroPurchase = msg.value != 0;
-        bool withinCap = weiRaised.add(msg.value) <= cap;
+        bool nonZeroPurchase = weiAmount != 0;
+        bool withinCap = weiRaised.add(weiAmount) <= getCap();
         bool isApproved = approvedContributors[msg.sender];
-        bool individualCapReached = contributedAmount[msg.sender].add(msg.value) > individualCap;
-        return !individualCapReached && isApproved && withinCap && withinPeriod && nonZeroPurchase;
+        return isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public constant returns (bool) {
-        bool capReached = weiRaised >= cap;
+        bool capReached = weiRaised >= getCap();
         return capReached || getTime() > endTime;
     }
 
@@ -193,5 +221,10 @@ contract StentorCrowdsale is Pausable {
     //returns the current time, overridden in mock files for testing purposes
     function getTime() internal returns (uint) {
         return now;
+    }
+
+    //returns cap, overridable in mock files for testing purposes
+    function getCap() internal returns (uint256) {
+        return cap;
     }
 }
