@@ -56,7 +56,6 @@ contract StentorCrowdsale is Pausable {
     /**
      * event for token purchase logging
      * @param purchaser who paid for the tokens
-     * @param beneficiary who got the tokens
      * @param value weis paid for purchase
      * @param amount amount of tokens purchased
      */
