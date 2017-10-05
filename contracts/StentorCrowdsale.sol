@@ -158,8 +158,8 @@ contract StentorCrowdsale is Pausable {
         bool nonZeroPurchase = msg.value != 0;
         bool withinCap = weiRaised.add(msg.value) <= cap;
         bool isApproved = approvedContributors[msg.sender];
-        bool individualCapReached = contributedAmount[msg.sender].add(msg.value) > individualCap;
-        return !individualCapReached && isApproved && withinCap && withinPeriod && nonZeroPurchase;
+        bool withinIndividualCap = contributedAmount[msg.sender].add(msg.value) <= individualCap;
+        return withinIndividualCap && isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended

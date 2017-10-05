@@ -133,6 +133,18 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Only an approved contributor can make a contribution", async () => {
+        const contributor = accounts[0];
+        const contribution = 1;
+
+        await crowdsale.setMockedTime(startTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({from: contributor, value: contribution});
+        });
+
+        //approve the contributor and let them try again
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await crowdsale.buyTokens({from: contributor, value: contribution});
+        assert.equal(await token.balanceOf(contributor), config.rate * contribution, "Contributor did not receive the correct amount of tokens");
     });
 
 });
