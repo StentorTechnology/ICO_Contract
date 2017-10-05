@@ -170,14 +170,14 @@ contract StentorCrowdsale is Pausable {
     function validPurchase(uint256 weiAmount) internal constant returns (bool) {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
         bool nonZeroPurchase = weiAmount != 0;
-        bool withinCap = weiRaised.add(weiAmount) <= cap;
+        bool withinCap = weiRaised.add(weiAmount) <= getCap();
         bool isApproved = approvedContributors[msg.sender];
         return isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public constant returns (bool) {
-        bool capReached = weiRaised >= cap;
+        bool capReached = weiRaised >= getCap();
         return capReached || getTime() > endTime;
     }
 
@@ -221,5 +221,10 @@ contract StentorCrowdsale is Pausable {
     //returns the current time, overridden in mock files for testing purposes
     function getTime() internal returns (uint) {
         return now;
+    }
+
+    //returns cap, overridable in mock files for testing purposes
+    function getCap() internal returns (uint256) {
+        return cap;
     }
 }
