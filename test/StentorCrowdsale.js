@@ -176,5 +176,25 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(await web3.eth.getBalance(crowdsale.address), 0, "Crowdsale did not refund correctly");
     });
 
+    it("Contributions can only be made during the crowdsale", async() => {
+        const contributor = accounts[0];
+
+        const beforeTokens = await token.balanceOf(contributor);
+        await crowdsale.setMockedTime(startTime - 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens.toNumber(), afterTokens.toNumber(), "Contributor was able to purchase tokens before the start");
+
+        await crowdsale.setMockedTime(endTime + 1);
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        const sameAmountOfTokens = await token.balanceOf(contributor);
+
+        assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the end");
+    });
 
 });
