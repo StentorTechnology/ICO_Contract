@@ -164,4 +164,17 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(await token.balanceOf(contributor), config.rate * contribution, "Contributor did not receive the correct amount of tokens");
     });
 
+    it("A contributor cannot contribute more than the individual cap, excess is refunded", async () => {
+        const contributor = accounts[0];
+        const contribution = web3.toBigNumber(config.individualCap).plus(1);
+
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await crowdsale.buyTokens({from: contributor, value: contribution});
+
+        assert.equal(await token.balanceOf(contributor), config.rate * config.individualCap, "Contributor exceeded the indvidual cap");
+        assert.equal(await web3.eth.getBalance(crowdsale.address), 0, "Crowdsale did not refund correctly");
+    });
+
+
 });

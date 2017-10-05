@@ -51,8 +51,8 @@ contract StentorCrowdsale is Pausable {
     //address allowed to add or remove contributors
     address public controller;
 
-    event ApprovedContributor(address contributor);
-    event RemovedContributor(address contributor);
+    event ApprovedContributor(address indexed contributor);
+    event RemovedContributor(address indexed contributor);
 
     event Finalized();
 
@@ -152,7 +152,7 @@ contract StentorCrowdsale is Pausable {
         token.transfer(msg.sender, tokens);
         TokenPurchase(msg.sender, weiAmount, tokens);
 
-        forwardFunds();
+        forwardFunds(weiAmount);
 
         //refund the user the remaining wei that was not used
         if(refundAmount > 0) {
@@ -162,8 +162,8 @@ contract StentorCrowdsale is Pausable {
 
     // In addition to sending the funds, we want to call
     // the RefundVault deposit function
-    function forwardFunds() internal {
-        vault.deposit.value(msg.value)(msg.sender);
+    function forwardFunds(uint256 weiAmount) internal {
+        vault.deposit.value(weiAmount)(msg.sender);
     }
 
     // @return true if the transaction can buy tokens
