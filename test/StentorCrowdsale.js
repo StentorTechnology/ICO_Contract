@@ -215,6 +215,24 @@ contract('StentorCrowdsale', async function (accounts) {
         const sameAmountOfTokens = await token.balanceOf(contributor);
 
         assert.equal(afterTokens.toNumber(), sameAmountOfTokens.toNumber(), "Contributor was able to purchase tokens after the hard cap was hit");
+        assert.equal(await crowdsale.hasEnded(), true, "Crowdsale hasEnded function did not return true");
+    });
+
+    it("Should not allow contributions to go through if the contract has been paused", async () => {
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.pause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        await assertFail(async function () {
+            await crowdsale.buyTokens({value: 1, from: contributor});
+        });
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.unpause.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        await crowdsale.buyTokens({value: 1, from: contributor});
     });
 
 });
