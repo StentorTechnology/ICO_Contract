@@ -128,9 +128,18 @@ contract StentorCrowdsale is Pausable {
 
     // low level token purchase function
     function buyTokens() whenNotPaused public payable {
-        require(validPurchase());
-
         uint256 weiAmount = msg.value;
+
+        //allow contributions only up until the cap, refund the rest
+        uint256 refundAmount = 0;
+
+        //determine if the user is trying to contribute more than the individual cap
+        if(contributedAmount[msg.sender].add(msg.value) > individualCap) {
+            refundAmount = contributedAmount[msg.sender].add(msg.value).sub(individualCap);
+            weiAmount = msg.value.sub(refundAmount);
+        }
+
+        require(validPurchase(weiAmount));
 
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
@@ -144,6 +153,11 @@ contract StentorCrowdsale is Pausable {
         TokenPurchase(msg.sender, weiAmount, tokens);
 
         forwardFunds();
+
+        //refund the user the remaining wei that was not used
+        if(refundAmount > 0) {
+            msg.sender.transfer(refundAmount);
+        }
     }
 
     // In addition to sending the funds, we want to call
@@ -153,13 +167,12 @@ contract StentorCrowdsale is Pausable {
     }
 
     // @return true if the transaction can buy tokens
-    function validPurchase() internal constant returns (bool) {
+    function validPurchase(uint256 weiAmount) internal constant returns (bool) {
         bool withinPeriod = getTime() >= startTime && getTime() <= endTime;
-        bool nonZeroPurchase = msg.value != 0;
-        bool withinCap = weiRaised.add(msg.value) <= cap;
+        bool nonZeroPurchase = weiAmount != 0;
+        bool withinCap = weiRaised.add(weiAmount) <= cap;
         bool isApproved = approvedContributors[msg.sender];
-        bool withinIndividualCap = contributedAmount[msg.sender].add(msg.value) <= individualCap;
-        return withinIndividualCap && isApproved && withinCap && withinPeriod && nonZeroPurchase;
+        return isApproved && withinCap && withinPeriod && nonZeroPurchase;
     }
 
     // @return true if crowdsale event has ended
