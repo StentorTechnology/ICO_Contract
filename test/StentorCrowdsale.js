@@ -233,6 +233,7 @@ contract('StentorCrowdsale', async function (accounts) {
             gas: 1000000
         });
         await crowdsale.buyTokens({value: 1, from: contributor});
+        assert.equal(await token.balanceOf(contributor), config.rate, "Contributor should receive 1 wei of tokens");
     });
 
 });
