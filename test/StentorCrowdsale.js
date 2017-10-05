@@ -173,6 +173,7 @@ contract('StentorCrowdsale', async function (accounts) {
 
         assert.equal(await token.balanceOf(contributor), config.rate * config.individualCap, "Contributor exceeded the indvidual cap");
         assert.equal(await web3.eth.getBalance(crowdsale.address), 0, "Crowdsale did not refund correctly");
+        assert.equal(await web3.eth.getBalance(vault.address), config.individualCap, "Vault did not receive the correct amount of ETH");
     });
 
     it("Contributions can only be made during the crowdsale", async() => {
