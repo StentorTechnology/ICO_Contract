@@ -11,8 +11,9 @@ const waitForEvents = require("./helpers/waitForEvents");
 contract('StentorCrowdsale', async function (accounts) {
 
     let token, crowdsale, vault, vestedWallet, startTime, endTime, foundationWallet;
-    const signers = [accounts[2]];
+    const signers = [accounts[0]];
     const controller = accounts[1];
+    const contributor = accounts[2];
 
     beforeEach(async () => {
         startTime = Math.floor(+new Date() / 1000) + 10; //10 seconds into the future
@@ -133,7 +134,7 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Controlled can only be changed by the owner", async () => {
-        const newController = accounts[2];
+        const newController = accounts[0];
         await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.changeController.getData(newController), {
             from: signers[0],
             gas: 1000000
@@ -143,14 +144,13 @@ contract('StentorCrowdsale', async function (accounts) {
 
         //ensure no one else can change the controller but the owner
         await assertFail(async function() {
-           await crowdsale.changeController(accounts[3], {from: accounts[3]});
+           await crowdsale.changeController(accounts[2], {from: accounts[2]});
         });
 
         assert.equal(await crowdsale.controller(), newController, "Controller was changed by non-owner");
     });
 
     it("Only an approved contributor can make a contribution", async () => {
-        const contributor = accounts[0];
         const contribution = 1;
 
         await crowdsale.setMockedTime(startTime + 1);
@@ -165,7 +165,6 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("A contributor cannot contribute more than the individual cap, excess is refunded", async () => {
-        const contributor = accounts[0];
         const contribution = web3.toBigNumber(config.individualCap).plus(1);
 
         await crowdsale.setMockedTime(startTime + 1);
@@ -177,8 +176,6 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Contributions can only be made during the crowdsale", async() => {
-        const contributor = accounts[0];
-
         const beforeTokens = await token.balanceOf(contributor);
         await crowdsale.setMockedTime(startTime - 1);
         await assertFail(async function () {
