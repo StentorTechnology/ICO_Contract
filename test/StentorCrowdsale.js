@@ -83,7 +83,7 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount, "Vested tokens transferred before vested period began");
     });
 
-    it("Should allow the transfer of some vested tokens six months after the crowdsale was finalized", async () => {
+    it("Should allow the half of the tokens to vest one year after the crowdsale was finalized", async () => {
         await crowdsale.setMockedTime(endTime + 1);
         await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
             from: signers[0],
