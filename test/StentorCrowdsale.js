@@ -127,7 +127,7 @@ contract('StentorCrowdsale', async function (accounts) {
         const teamOwned = config.team.amount / config.initialSupply; //percentage of totalSupply that the team (not foundation) owns
 
         //calculate how many tokens the foundation should have after one year
-        //calculatedTokens = foundation initial amount + 50% of team's vested tokens
+        //calculatedTokens = foundation initial amount + 100% of team's vested tokens
         const calculatedTokens = web3.fromWei(totalSupply.mul(teamOwned).add(config.foundation.amount)).toNumber();
         const realTokens = web3.fromWei(balance).toNumber();
         assert.equal(realTokens, calculatedTokens, "Tokens vested incorrectly");
