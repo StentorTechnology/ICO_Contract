@@ -158,10 +158,36 @@ contract('StentorCrowdsale', async function (accounts) {
             await crowdsale.buyTokens({from: contributor, value: contribution});
         });
 
-        //approve the contributor and let them try again
+        //approve the contributor
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        //remove the contributor to see if they can buy tokens
+        await crowdsale.removeContributor(contributor, {from: controller});
+        await assertFail(async function () {
+            await crowdsale.buyTokens({from: contributor, value: contribution});
+        });
+
+        //approve the contributor and see if they can buy now
         await crowdsale.approveContributor(contributor, {from: controller});
         await crowdsale.buyTokens({from: contributor, value: contribution});
         assert.equal(await token.balanceOf(contributor), config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+    });
+
+    it("Bulk approval and removal of contributors", async () => {
+        const contributors = [accounts[4], accounts[5], accounts[6]];
+        await crowdsale.approveContributors(contributors, {from: controller});
+        await crowdsale.removeContributors(contributors, {from: controller});
+
+        await assertFail(async function () {
+            await crowdsale.buyTokens({from: contributors[2], value: contribution});
+        });
+
+        await crowdsale.approveContributors(contributors, {from: controller});
+        await crowdsale.setMockedTime(startTime + 1);
+
+        const contribution = 1;
+        await crowdsale.buyTokens({from: contributors[2], value: contribution});
+        assert.equal(await token.balanceOf(contributors[2]), config.rate * contribution, "Contributor did not receive the correct amount of tokens");
     });
 
     it("A contributor cannot contribute more than the individual cap, excess is refunded", async () => {
