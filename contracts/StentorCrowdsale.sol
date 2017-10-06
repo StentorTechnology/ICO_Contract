@@ -215,7 +215,7 @@ contract StentorCrowdsale is Pausable {
     }
 
     function goalReached() public constant returns (bool) {
-        return weiRaised >= goal;
+        return weiRaised >= getGoal();
     }
 
     //returns the current time, overridden in mock files for testing purposes
@@ -226,5 +226,10 @@ contract StentorCrowdsale is Pausable {
     //returns cap, overridable in mock files for testing purposes
     function getCap() internal returns (uint256) {
         return cap;
+    }
+
+    //returns goal, overridable in mock files for testing purposes
+    function getGoal() internal returns (uint256) {
+        return goal;
     }
 }
