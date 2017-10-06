@@ -237,4 +237,59 @@ contract('StentorCrowdsale', async function (accounts) {
         assert.equal(await token.balanceOf(contributor), config.rate, "Contributor should receive 1 wei of tokens");
     });
 
+    it("Contributors should be able to withdraw if the goal has not been met and the crowdsale has ended", async () => {
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        const beforeTokens = await token.balanceOf(contributor);
+        const contribution = web3.toBigNumber(config.individualCap);
+        const balanceBefore = await web3.eth.getBalance(contributor);
+        await crowdsale.buyTokens({value: contribution, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+        assert.equal(await crowdsale.goalReached(), false, "Goal should have been reached");
+
+        //force crowdsale to end
+        await crowdsale.setMockedTime(endTime + 1);
+        assert.equal(await crowdsale.hasEnded(), true, "Crowdsale should have ended");
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        assert.equal(await crowdsale.isFinalized(), true, "Crowdsale should have been finalized");
+        assert.equal((await web3.eth.getBalance(foundationWallet.address)).toNumber(), 0, "Funds contributed to the campaign were forwarded to the foundation erroneously");
+
+        await crowdsale.claimRefund({from: contributor});
+        assert.equal((await web3.eth.getBalance(vault.address)).toNumber(), 0, "Contributor was not refunded correctly");
+    });
+
+    it("Funds should be forwarded if the goal is met and the crowdsale has ended", async () => {
+        //set mock hardcap == individual cap for easier testing
+        await crowdsale.setMockedCap(config.individualCap);
+        //set mock goal == hardcap - 1 for easier testing
+        await crowdsale.setMockedGoal(web3.toBigNumber(config.individualCap).minus(1));
+        await crowdsale.setMockedTime(startTime + 1);
+        await crowdsale.approveContributor(contributor, {from: controller});
+
+        const beforeTokens = await token.balanceOf(contributor);
+        const contribution = web3.toBigNumber(config.individualCap).minus(1);
+        await crowdsale.buyTokens({value: contribution, from: contributor});
+        const afterTokens = await token.balanceOf(contributor);
+
+        assert.equal(beforeTokens, afterTokens.toNumber() - config.rate * contribution, "Contributor did not receive the correct amount of tokens");
+        assert.equal(await crowdsale.hasEnded(), false, "Crowdsale hasEnded function did not return false");
+        assert.equal(await crowdsale.goalReached(), true, "Goal should have been reached");
+
+        //force crowdsale to end
+        await crowdsale.setMockedTime(endTime + 1);
+        assert.equal(await crowdsale.hasEnded(), true, "Crowdsale should have ended");
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.finalize.getData(), {
+            from: signers[0],
+            gas: 1000000
+        });
+        assert.equal(await crowdsale.isFinalized(), true, "Crowdsale should have been finalized");
+        assert.equal((await web3.eth.getBalance(foundationWallet.address)).toNumber(), contribution.toNumber(), "Funds contributed to the campaign did not forward correctly to the foundation");
+    });
+
 });
