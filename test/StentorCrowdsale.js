@@ -3,6 +3,7 @@ let StentorCrowdsale = artifacts.require('./test/StentorCrowdsaleMock.sol');
 let RefundVault = artifacts.require('./zeppelin/contracts/crowdsale/RefundVault.sol');
 let VestedWallet = artifacts.require('./test/VestedWalletMock.sol');
 let MultiSigWallet = artifacts.require('./MultiSigWallet.sol');
+let ForceEther = artifacts.require('./test/ForceEther.sol');
 
 let config = require('./../config');
 const assertFail = require("./helpers/assertFail");
@@ -316,6 +317,35 @@ contract('StentorCrowdsale', async function (accounts) {
         });
         assert.equal(await crowdsale.isFinalized(), true, "Crowdsale should have been finalized");
         assert.equal((await web3.eth.getBalance(foundationWallet.address)).toNumber(), contribution.toNumber(), "Funds contributed to the campaign did not forward correctly to the foundation");
+    });
+
+    it("Allows for ETH and tokens to be extracted from the crowdsale by the owner", async () => {
+        let randomToken = await StentorToken.new(config.initialSupply);
+        await randomToken.transfer(crowdsale.address, config.initialSupply);
+        assert.equal(config.initialSupply, await randomToken.balanceOf(crowdsale.address));
+
+        //extract the tokens
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.claimTokens.getData(randomToken.address), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        assert.equal(0, await randomToken.balanceOf(crowdsale.address));
+        assert.equal(config.initialSupply, await randomToken.balanceOf(foundationWallet.address));
+
+        //extract ETH somehow sent to this address (ie through selfdestruct)
+        let etherForcer = await ForceEther.new({value: 1});
+        await etherForcer.destroyAndSend(crowdsale.address);
+
+        assert.equal(1, await web3.eth.getBalance(crowdsale.address), "Self destruct did not force the sending of ether");
+
+        await foundationWallet.submitTransaction(crowdsale.address, 0, crowdsale.contract.claimTokens.getData(0), {
+            from: signers[0],
+            gas: 1000000
+        });
+
+        assert.equal(0, await web3.eth.getBalance(crowdsale.address), "Could not correctly claim stuck ETH");
+
     });
 
 });
