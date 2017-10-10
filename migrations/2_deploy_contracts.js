@@ -19,11 +19,10 @@ module.exports = async function(deployer, network, accounts) {
 
     //allocate SGT for the crowdsale, team, and foundation
     await StentorToken.deployed().then(async (token) => {
-        // await token.transfer(StentorCrowdsale.address, config.cap);
         // the foundation will control the cap for pre-sale purposes
-        await token.transfer(FoundationMultiSig.address, config.cap);
+        await token.transfer(FoundationMultiSig.address, web3.toBigNumber(config.cap).mul(config.rate).plus(config.foundation.amount));
         await token.transfer(VestedWallet.address, config.team.amount);
-        await token.transfer(FoundationMultiSig.address, config.foundation.amount);
+
     });
 
     //transfer control of the vault to the crowdsale
