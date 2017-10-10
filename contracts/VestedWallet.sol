@@ -45,7 +45,7 @@ pragma solidity ^0.4.11;
 import "./StentorToken.sol";
 import "./StentorCrowdsale.sol";
 import "zeppelin/contracts/math/SafeMath.sol";
-import "zeppelin/contracts/token/BasicToken.sol";
+import "zeppelin/contracts/token/ERC20Basic.sol";
 import "zeppelin/contracts/ownership/Ownable.sol";
 
 
@@ -110,7 +110,7 @@ contract VestedWallet is Ownable {
             return;
         }
 
-        BasicToken token = BasicToken(_token);
+        ERC20Basic token = ERC20Basic(_token);
         uint256 balance = token.balanceOf(this);
         token.transfer(owner, balance);
         ClaimedTokens(_token, owner, balance);

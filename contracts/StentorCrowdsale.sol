@@ -4,6 +4,7 @@ pragma solidity ^0.4.15;
 import "zeppelin/contracts/math/SafeMath.sol";
 import "zeppelin/contracts/lifecycle/Pausable.sol";
 import "zeppelin/contracts/crowdsale/RefundVault.sol";
+import "zeppelin/contracts/token/ERC20Basic.sol";
 import "./StentorToken.sol";
 
 
@@ -66,7 +67,6 @@ contract StentorCrowdsale is Pausable {
 
 
     function StentorCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, uint256 _cap, uint256 _individualCap, address _vault, address _token, address _controller) {
-
         require(_startTime >= getTime());
         require(_endTime >= _startTime);
         require(_rate > 0);
@@ -215,7 +215,7 @@ contract StentorCrowdsale is Pausable {
     }
 
     function goalReached() public constant returns (bool) {
-        return weiRaised >= goal;
+        return weiRaised >= getGoal();
     }
 
     //returns the current time, overridden in mock files for testing purposes
@@ -227,4 +227,33 @@ contract StentorCrowdsale is Pausable {
     function getCap() internal returns (uint256) {
         return cap;
     }
+
+    //returns goal, overridable in mock files for testing purposes
+    function getGoal() internal returns (uint256) {
+        return goal;
+    }
+
+    //////////
+    // Safety Methods
+    //////////
+
+    //@notice This method can be used by the controller to extract mistakenly
+    //sent tokens to this contract.
+    //@param _token The address of the token contract that you want to recover
+    //set to 0 in case you want to extract ether.
+    function claimTokens(address _token) public onlyOwner {
+        require(_token != address(token)); //don't allow us to extract our own token
+        if (_token == 0x0) {
+            owner.transfer(this.balance);
+            return;
+        }
+
+        ERC20Basic extractingToken = ERC20Basic(_token);
+        uint256 balance = extractingToken.balanceOf(this);
+        extractingToken.transfer(owner, balance);
+        ClaimedTokens(_token, owner, balance);
+    }
+
+    event ClaimedTokens(address indexed _token, address indexed _controller, uint256 _amount);
+
 }
