@@ -26,7 +26,7 @@ contract('StentorCrowdsale', async function (accounts) {
         crowdsale = await StentorCrowdsale.new(startTime, endTime, config.rate, config.goal, config.cap, config.individualCap, vault.address, token.address, controller);
         vestedWallet = await VestedWallet.new(foundationWallet.address, crowdsale.address, token.address);
 
-        await token.transfer(crowdsale.address, config.cap);
+        await token.transfer(crowdsale.address, web3.toBigNumber(config.cap).mul(config.rate));
         await token.transfer(vestedWallet.address, config.team.amount);
         await token.transfer(foundationWallet.address, config.foundation.amount);
 
@@ -42,9 +42,11 @@ contract('StentorCrowdsale', async function (accounts) {
     });
 
     it("Token correctly transferred initialSupply", async () => {
-        assert.equal(await token.balanceOf(crowdsale.address), config.cap);
-        assert.equal(await token.balanceOf(vestedWallet.address), config.team.amount);
-        assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount);
+        assert.equal(await token.balanceOf(crowdsale.address), web3.toBigNumber(config.cap).mul(config.rate).toNumber(), "Balance of crowdsale invalid");
+        assert.equal(await token.balanceOf(vestedWallet.address), config.team.amount, "Balance of vested wallet invalid");
+        assert.equal(await token.balanceOf(foundationWallet.address), config.foundation.amount, "Balance of foundation invalid");
+        assert.equal(await token.totalSupply(), web3.toBigNumber(config.cap).mul(config.rate).plus(config.team.amount).plus(config.foundation.amount).toNumber(), "Total supply invalid");
+
     });
 
     it("Should not allow any tokens to be transferred before the crowdsale ends", async () => {
