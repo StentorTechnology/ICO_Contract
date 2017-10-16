@@ -6,20 +6,7 @@
 npm install && npm run ethinstall
 ```
 
-## Deploying
-
-Ensure testrpc is running:
-```bash
-npm run testrpc
-```
-
-Then compile and deploy:
-```bash
-npm run deploy
-```
-
-## Testing & Linting
+## Testing
 ```bash
 npm run test
-npm run lint
 ```

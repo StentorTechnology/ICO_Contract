@@ -10,8 +10,8 @@
     "deploy": "./node_modules/truffle/build/cli.bundled.js deploy --reset",
     "ethinstall": "./node_modules/truffle/build/cli.bundled.js install",
     "lint": "./node_modules/solium/bin/solium.js --dir .",
-    "test": "./node_modules/truffle/build/cli.bundled.js test",
-    "testrpc": "./node_modules/ethereumjs-testrpc/build/cli.node.js"
+    "test": "concurrently \"sleep 3 && ./node_modules/truffle/build/cli.bundled.js test\" \"npm run testrpc\"",
+    "testrpc": "./node_modules/ethereumjs-testrpc/build/cli.node.js > /dev/null"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +19,7 @@
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^2.0.1",
+    "concurrently": "^3.5.0",
     "ethereumjs-testrpc": "^4.0.1",
     "solium": "^0.5.5",
     "truffle": "^3.4.7"
