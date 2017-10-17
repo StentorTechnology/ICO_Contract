@@ -1,6 +1,5 @@
 pragma solidity ^0.4.15;
 
-import "zeppelin/contracts/token/StandardToken.sol";
 import "zeppelin/contracts/token/BurnableToken.sol";
 
 /**
@@ -8,7 +7,7 @@ import "zeppelin/contracts/token/BurnableToken.sol";
  * @dev ERC20 Token
  * It is meant to be used in a crowdsale contract.
  */
-contract StentorToken is StandardToken, BurnableToken {
+contract StentorToken is BurnableToken {
 
     string public constant name = "Stentor Game Token";
     string public constant symbol = "SGT";
