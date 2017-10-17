@@ -212,6 +212,9 @@ contract StentorCrowdsale is Pausable {
         else {
             vault.enableRefunds();
         }
+
+        // burn remaining tokens
+        token.burn(token.balanceOf(address(this)));
     }
 
     function goalReached() public constant returns (bool) {
